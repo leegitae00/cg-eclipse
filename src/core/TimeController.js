@@ -1,11 +1,9 @@
-// TimeController.js (Final)
-// Three.js에 독립적인 순수 수학/로직 모듈
-// 요구: ../utils/math3d.js 제공 함수 사용
+// utils/math3d.js 함수 사용
 import {
     vec3, add, sub, dot, length, normalize, mul, rotateZXY, angleBetween,
 } from '../utils/math3d.js';
 
-/**
+/** 
  * 유틸(내부): 외적/거리/투영 등
  */
 function cross(a, b) {
@@ -24,11 +22,7 @@ function vscale(v, s) { return mul(v, s); }
 function dist(a, b) { return length(sub(a, b)); }
 function nearZero(x, eps = 1e-9) { return Math.abs(x) < eps; }
 
-/**
- * 기본 설정값(스케일은 씬 단위와 맞춰 튜닝)
- *  - 장반경 a, 반지름, 주기(period)를 통해 평균운동 n을 자동 계산 가능
- *  - 여기선 n을 직접 줄 수도 있고 periodSec을 주면 n을 계산함
- */
+
 const DEFAULTS = {
     time: { startEpochMs: Date.now(), timeScale: 24 }, // 1sec(real) = 24sec(sim)
     // 태양은 원점으로 고정 (필요시 소폭 진동/자전 구현 가능)
@@ -92,10 +86,6 @@ function orbitalPositionAt(t, refStartMs, p) {
     return rotateZXY({ x, y, z: 0 }, p.ω || 0, p.i || 0, p.Ω || 0);
 }
 
-/**
- * 케플러 방정식 E - e sinE = M
- * 뉴턴-랩슨 + 안전장치
- */
 function solveKeplerE(M, e) {
     // M을 -π~π로 정규화
     let Mm = ((M + Math.PI) % (2 * Math.PI)) - Math.PI;
@@ -110,12 +100,6 @@ function solveKeplerE(M, e) {
     return E;
 }
 
-/**
- * 위상각/조도비 계산
- * - phaseAngle = angle( Sun→Moon , Earth→Moon )
- * - illuminatedFraction = (1 + cos(phaseAngle)) / 2
- *   (0: 신월, π: 보름달)
- */
 function phaseMetrics(sun, earth, moon) {
     const vSM = sub(moon, sun);
     const vEM = sub(moon, earth);
@@ -131,27 +115,6 @@ function phaseNameFromAngle(phiRad, epsDeg = 8) {
     return null;
 }
 
-/**
- * 그림자 원뿔 판정(확장광원: 태양)
- * - 광원 반경 R_sun, 가림체 반경 r_occ, 광원-가림체 거리 D
- * - 우산(umbra) 길이 Lu = D * r_occ / (R_sun - r_occ)  (R_sun > r_occ 가정)
- * - 반그림자(펜움브라)는 축 반대 방향으로 퍼짐 (개념상 반대 쪽 "antumbra"에선 재출현)
- *
- * 판정 절차:
- *  1) 축(axis) = normalize(light - apex)  (apex는 occluder 중심)
- *  2) target 중심을 축으로 정사영한 점 P = apex + axis * proj
- *  3) P와 target 중심 간 거리 d_perp
- *  4) P에서의 '그림자 원' 반경 r_shadow(proj) 계산:
- *     - umbra 구간: 0 <= proj <= Lu  → r_u(proj) = (Lu - proj) * (r_occ / Lu)
- *     - antumbra/penumbra 구간: proj > Lu
- *         * antumbra(가림체가 더 작아져서 광원이 둘러 보임) vs penumbra(경계)
- *       간단 근사: r_p(proj) = (proj - Lu) * (R_sun / (D - Lu))  (선형 확장)
- *  5) d_perp ≤ r_shadow + R_target*penumbraScale 이면 히트
- *  6) subtype 결정:
- *      - d_perp <= r_umbra → 'umbra' (solar이면 지구가 완전히 가려짐, lunar이면 달 완전 월식)
- *      - r_umbra < d_perp <= r_penumbra → 'penumbra'
- *      - solar에서 proj > Lu 이고 d_perp 작은 영역은 'antumbra'(금환)
- */
 function coneShadowHit({ light, apex, occluderR, target, targetR, sunR, penumbraScale = 1.0 }) {
     // 벡터/스칼라 준비
     const axis = normalize(sub(light, apex));
@@ -427,7 +390,6 @@ export class TimeController {
             }
         }
 
-        // 정렬되었지만 히트 안 됨
         return null;
     }
 }
