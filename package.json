@@ -1,0 +1,19 @@
+{
+  "name": "cg-eclipse",
+  "version": "1.0.0",
+  "description": "Sun-Earth-Moon Eclipse Simulation using Three.js and Vite",
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.181.0"
+  },
+  "devDependencies": {
+    "vite": "^7.1.12"
+  }
+}
