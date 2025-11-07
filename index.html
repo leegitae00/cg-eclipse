@@ -1,65 +1,188 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ko">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CG: Sun–Earth–Moon</title>
-    <style>
-        html,
-        body {
-            margin: 0;
-            height: 100%;
-            background: #0b1020;
-            color: #eee;
-            font-family: system-ui;
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Computer Graphics Term Project: Eclipse</title>
 
-        #app {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600&display=swap" rel="stylesheet" />
 
-        .hud {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            display: flex;
-            gap: 8px;
-            z-index: 10;
-            background: rgba(0, 0, 0, .35);
-            padding: 8px 10px;
-            border-radius: 8px;
-            backdrop-filter: blur(4px);
-        }
 
-        button,
-        input[type="range"] {
-            cursor: pointer
-        }
+  <!--Style -->
+  <style>
+    :root{
+      --bg:#0b0f17; --panel:#121826; --muted:#8aa0b2; --text:#e8f0f7;
+      --accent:#4cc9f0; --accent-2:#94f; --danger:#ff6b6b; --ok:#2dd4bf;
+      --border:#223046;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; background:var(--bg); color:var(--text);
+      font-family:"Pretendard", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height:1.35;
+    }
+    header{
+      display:flex; align-items:center; gap:.8rem;
+      padding:.8rem 1rem; border-bottom:1px solid var(--border);
+      background:linear-gradient(180deg, #0b1220, #0b0f17);
+      position:sticky; top:0; z-index:10;
+    }
+    header h1{font-size:1rem; margin:0; font-weight:600; letter-spacing:.2px}
+    main.layout{display:grid; grid-template-columns: 320px 1fr; gap:0; height:calc(100vh - 56px);}
+    aside#ui-panel{
+      background:var(--panel); border-right:1px solid var(--border);
+      overflow:auto; padding:12px;
+    }
+    .section{
+      border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:12px;
+      background:rgba(10,14,24,.6);
+    }
+    .section h2{margin:0 0 .5rem 0; font-size:.95rem}
+    .row{display:flex; gap:8px; align-items:center; margin:.4rem 0;}
+    .row > *{flex:1}
+    label{font-size:.85rem; color:var(--muted)}
+    input, select, button, progress{
+      background:#0c1424; color:var(--text); border:1px solid var(--border);
+      border-radius:8px; padding:.55rem .6rem; font:inherit;
+    }
+    input[type="range"]{padding:0}
+    button{cursor:pointer}
+    button.primary{border-color:transparent; background:linear-gradient(90deg, var(--accent), var(--accent-2)); color:#02121d; font-weight:600}
+    button.warn{background:#251519; border-color:#42202a; color:#ffb4c2}
+ 
+    button.ghost{background:transparent; border:1px solid var(--border); color:var(--text)}
+    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+    .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px}
 
-        .stat {
-            position: absolute;
-            bottom: 12px;
-            left: 12px;
-            font-size: 12px;
-            opacity: .75
-        }
-    </style>
+    .stage{position:relative; height:100%; display:grid; grid-template-rows: 1fr auto;}
+    #gl-wrap{position:relative; height:100%; background:radial-gradient(60% 56% at 50% 44%, #0c1424 0%, #060910 70%);}
+    canvas#gl-canvas{display:block; width:100%; height:100%; outline:none; background:transparent;}
+    #hud{
+      position:absolute; inset:0; pointer-events:none; padding:10px;
+      display:flex; flex-direction:column; justify-content:space-between;
+      font-size:.85rem; color:#cfe7ff;
+    }
+    .hud-top{display:flex; gap:8px; align-items:center}
+    .hud-pill{
+      pointer-events:auto;
+      background:rgba(6,12,20,.65); border:1px solid var(--border);
+      border-radius:10px; padding:.35rem .5rem;
+    }
+    .footer{
+      border-top:1px solid var(--border); padding:8px 12px; color:var(--muted); font-size:.8rem;
+      display:flex; justify-content:space-between; align-items:center; gap:8px;
+    }
+    @media (max-width: 980px){
+      main.layout{grid-template-columns:1fr}
+      aside#ui-panel{height:46vh}
+    }
+  </style>
 </head>
 
 <body>
-    <div id="app">
-        <div class="hud">
-            <button id="playPause">⏯️</button>
-            <label>Speed <input id="speed" type="range" min="0.1" max="200" step="0.1" value="24"></label>
-            <button id="newMoon">New Moon</button>
-            <button id="fullMoon">Full Moon</button>
-        </div>
-        <div class="stat" id="stat">t=? | phase=?</div>
-    </div>
-    <script type="module" src="/src/main.js"></script>
-</body>
+  <header>
+    <h1>Computer Graphics Term Project: Eclipse (Three.js)</h1>
+  </header>
 
+  <main class="layout">
+    <!-- ===== Left: UI Panel ===== -->
+    <aside id="ui-panel" aria-label="시뮬레이션 제어 패널">
+
+      <!-- Time-->
+      <section class="section" id="sec-time">
+        <h2>시간 제어</h2>
+
+        <div class="row grid3" role="group" aria-label="재생 제어">
+          <button id="btn-play" class="primary" title="재생/일시정지" data-action="toggle-play">▶︎/⏸</button>
+        </div>
+
+        <div class="row">
+          <button id="btn-reset" class="warn" title="초기화">⟲ 리셋</button>
+        </div>
+
+        <div class="row">
+          <label for="speedLine">속도</label>
+          <input id="speedLine" type="range" min="0" max="86400" step="60" value="0" />
+        </div>
+
+        <div class="row" role="group" aria-label="퀵 점프" style="align-items:center;">
+          <label style="flex:0 0 auto; color:var(--muted); font-size:.9rem;">퀵 점프</label>
+          <div class="grid2" style="flex:1;">
+            <label class="row" style="gap:6px; align-items:center;">
+              <input type="radio" name="quickJump" id="quick-new" value="new" checked /> 초승달
+            </label>
+            <label class="row" style="gap:6px; align-items:center;">
+              <input type="radio" name="quickJump" id="quick-full" value="full" /> 보름달
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Change Mode-->
+      <section class="section" id="sec-camera">
+        <h2>카메라 모드</h2>
+        <div class="row grid2" role="group" aria-label="카메라 모드">
+          <label class="row" style="gap:6px; align-items:center;">
+            <input type="radio" name="camMode" id="cam-observer" value="observer" /> 관측자 모드
+          </label>
+          <label class="row" style="gap:6px; align-items:center;">
+            <input type="radio" name="camMode" id="cam-space" value="space" checked /> 우주(자유) 모드
+          </label>
+        </div>
+      </section>
+
+      <!-- Change Viewpoint — -->
+      <section class="section" id="sec-direction">
+        <h2>시점 전환 (Space 전용)</h2>
+        <div class="row grid2">
+          <button id="btn-north" class="ghost">북쪽 시점</button>
+          <button id="btn-south" class="ghost">남쪽 시점</button>
+          <button id="btn-east" class="ghost">동쪽 시점</button>
+          <button id="btn-west" class="ghost">서쪽 시점</button>
+        </div>
+      </section>
+
+      <!-- Eclipse Event -->
+      <section class="section" id="sec-events">
+        <h2>천문 이벤트</h2>
+        <div class="row grid2" role="group" aria-label="천문이벤트">
+          <label class="row" style="gap:6px; align-items:center;">
+            <input type="radio" name="eventMode" id="event-solar" value="solar-eclipse" checked /> 일식
+          </label>
+          <label class="row" style="gap:6px; align-items:center;">
+            <input type="radio" name="eventMode" id="event-moon" value="moon-eclipse" /> 월식
+          </label>
+        </div>
+      </section>
+      </aside>
+
+    <!-- ===== Right: Stage (Canvas)===== -->
+    <section class="stage" aria-label="시뮬레이션 스테이지">
+      <div id="gl-wrap">
+        <canvas id="gl-canvas" width="1280" height="720" aria-label="Three.js 캔버스"></canvas>
+        
+        <noscript>
+          <div class="hud-pill" style="position:absolute; bottom:10px; left:10px; background:#3b1f1f; border-color:#5a2a2a;">
+            자바스크립트가 비활성화되어 Three.js를 실행할 수 없습니다.
+          </div>
+        </noscript>
+      </div>
+
+      <div class="footer">
+        <span>Renderer: Three.js • 캔버스 크기 <span id="canvasSize">—</span></span>
+        <span>© Team — Gachon Univ. WebGL</span>
+      </div>
+    </section>
+  </main>
+
+
+  <script type="module">
+    import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js";
+    window.THREE = THREE;
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
 </html>
