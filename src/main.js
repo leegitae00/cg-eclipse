@@ -1,10 +1,8 @@
-// === src/main.js (with minimal additions) ===
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js";
 import { CameraManager } from "./core/CameraManager.js";
 import { UIController } from "./ui/UIController.js";
 import { SceneManager } from "./core/SceneManager.js";
 import { TimeController } from "./core/TimeController.js";
-import { LightingEffect } from "./core/LightingEffect.js"; // [ADD]
 
 // --------------------------
 // 전역 변수
@@ -12,7 +10,6 @@ import { LightingEffect } from "./core/LightingEffect.js"; // [ADD]
 let scene, renderer, cameraManager, ui, sceneManager, timeController;
 // ◀ sun, earth, moon, theta 변수 삭제 (각 매니저가 관리)
 let clock = new THREE.Clock(); // ◀ TimeController에 실제 시간을 전달하기 위한 시계
-let lightingEffect; // [ADD]
 
 // --------------------------
 // 초기화
@@ -21,10 +18,10 @@ window.onload = function init() {
   const canvas = document.getElementById("gl-canvas");
 
   // 🔹 렌더러 설정
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); // alpha:true는 배경 CSS 유지용 [ADD: alpha]
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setSize(canvas.clientWidth, canvas.clientHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.setClearColor(0x000000, 0); // 투명 배경으로 변경 [ADD: 투명도 0]
+  renderer.setClearColor(0x000000);
   // ◀ 그림자 맵 활성화
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -78,16 +75,6 @@ window.onload = function init() {
   };
   // (참고) 퀵 점프(위상 점프)도 UIController.js에서 연결 필요
 
-  // 🔹 LightingEffect 생성 및 장착 [ADD]
-  // SceneManager가 만든 지구/달 메쉬에 맞춰 커스텀 셰이더/섀도우를 적용한다.
-  lightingEffect = new LightingEffect(sceneManager, renderer, {
-    shadowRes: 1024,
-    orthoSize: 8.0,
-    pcf: 2,
-    redness: 1.0,
-    atmIntensity: 1.0,
-  });
-
   // 🔹 창 리사이즈 대응
   window.addEventListener("resize", () => onResize());
 
@@ -117,16 +104,6 @@ function animate() {
 
   // CameraManager의 update 함수 호출 
   cameraManager.update(sunPosVec3, earthPosVec3, moonPosVec3);
-
-  // LightingEffect 업데이트 (섀도우맵 렌더 + 셰이더 유니폼 갱신) [ADD]
-  if (lightingEffect) {
-    lightingEffect.update({
-      sun: sunPosVec3,
-      earth: earthPosVec3,
-      moon: moonPosVec3,
-      camera: cameraManager.getCamera(),
-    });
-  }
 
   // 렌더링
   renderer.render(scene, cameraManager.getCamera());
