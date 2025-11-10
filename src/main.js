@@ -3,6 +3,8 @@ import { CameraManager } from "./core/CameraManager.js";
 import { UIController } from "./ui/UIController.js";
 import { SceneManager } from "./core/SceneManager.js";
 import { TimeController } from "./core/TimeController.js";
+// [ADD] LightingEffect 추가
+import { LightingEffect } from "./core/LightingEffect.js";
 
 // --------------------------
 // 전역 변수
@@ -10,6 +12,8 @@ import { TimeController } from "./core/TimeController.js";
 let scene, renderer, cameraManager, ui, sceneManager, timeController;
 // ◀ sun, earth, moon, theta 변수 삭제 (각 매니저가 관리)
 let clock = new THREE.Clock(); // ◀ TimeController에 실제 시간을 전달하기 위한 시계
+// [ADD] 조명/그림자 & 셰이더 효과 매니저
+let lightingEffect;
 
 // --------------------------
 // 초기화
@@ -47,6 +51,20 @@ window.onload = function init() {
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
   scene.add(ambientLight);
   // -----------------------------------------------------------------
+
+  // [ADD] LightingEffect 초기화 (지구/달 메쉬 이름 지정 후 생성)
+  const earthMesh = sceneManager.getEarthMesh();
+  const moonMesh  = sceneManager.getMoonMesh();
+  if (earthMesh && !earthMesh.name) earthMesh.name = "earth";
+  if (moonMesh  && !moonMesh.name)  moonMesh.name  = "moon";
+
+  lightingEffect = new LightingEffect(sceneManager, renderer, {
+    shadowRes: 1024,   // 그림자 맵 해상도
+    orthoSize: 8.0,    // 태양(방향광) 직교 투영 박스 크기
+    pcf: 2,            // PCF 반경(0~3)
+    redness: 1.0,      // 월식 붉은 정도
+    atmIntensity: 1.0  // 대기 산란 강도
+  });
 
   // 🔹 TimeController 초기화
   // onPositions(data)를 호출하면 -> sceneManager.update(data)가 실행됨
@@ -98,12 +116,22 @@ function animate() {
   const positions = timeController.getPositions();
 
   // {x, y, z}를 THREE.Vector3로 변환
-  const sunPosVec3 = new THREE.Vector3().copy(positions.sun);
+  const sunPosVec3   = new THREE.Vector3().copy(positions.sun);
   const earthPosVec3 = new THREE.Vector3().copy(positions.earth);
-  const moonPosVec3 = new THREE.Vector3().copy(positions.moon);
+  const moonPosVec3  = new THREE.Vector3().copy(positions.moon);
 
   // CameraManager의 update 함수 호출 
   cameraManager.update(sunPosVec3, earthPosVec3, moonPosVec3);
+
+  // [ADD] LightingEffect 업데이트 (그림자 맵 생성 + 셰이더 유니폼 갱신)
+  if (lightingEffect) {
+    lightingEffect.update({
+      sun:   sunPosVec3,
+      earth: earthPosVec3,
+      moon:  moonPosVec3,
+      camera: cameraManager.getCamera()
+    });
+  }
 
   // 렌더링
   renderer.render(scene, cameraManager.getCamera());
